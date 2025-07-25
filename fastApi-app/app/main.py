@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import init_db
 from app.auth.routes import auth_router
+from app.api.routes import universities
 
 
 @asynccontextmanager
@@ -33,7 +34,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router, prefix=f"/api/v1/auth", tags=["auth"])
-
+app.include_router(universities.router)
 
 @app.get("/")
 def read_root():
