@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+sqlmodel
+asyncpg
+redis
+python-multipart
+PyJWT
+passlib
+python-dotenv
+python-dateutil
+bcrypt
+colorama
+starlette
+SQLAlchemy
+sqlmodel
