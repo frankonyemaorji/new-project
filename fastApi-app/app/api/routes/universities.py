@@ -87,7 +87,8 @@ async def create_university(
     Only admin users can create universities.
     """
     university = await university_service.create_university(university_data, session)
-    return UniversityResponse.model_validate(university)
+    university_dict = {k: v for k, v in university.__dict__.items() if not k.startswith("_")}
+    return UniversityResponse.model_validate(university_dict)
 
 
 @router.put("/{university_id}", response_model=UniversityResponse)
