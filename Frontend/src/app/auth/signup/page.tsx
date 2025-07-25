@@ -1,28 +1,28 @@
 "use client";
-
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/lib/context/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { getSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/context/AuthContext";
+
 import { 
   Eye, 
   EyeOff, 
   Mail, 
   Lock, 
   User, 
-  UserPlus, 
   AlertCircle, 
   CheckCircle,
   GraduationCap,
-  Building2,
   Shield,
   Users,
   ArrowRight,
@@ -30,8 +30,6 @@ import {
   Star,
   Zap
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 
 // African countries list
 const AFRICAN_COUNTRIES = [
@@ -50,7 +48,7 @@ const AFRICAN_COUNTRIES = [
 export default function SignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { register, user } = useAuth();
+  const { user } = useAuth();
 
   // Redirect authenticated users away from signup page
   React.useEffect(() => {
@@ -60,13 +58,14 @@ export default function SignUpPage() {
   }, [user, router]);
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    last_name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
     nationality: "",
-    role: "student",
+    role: "user",
     agreeToTerms: false
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -77,6 +76,12 @@ export default function SignUpPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Auto-generate username from email
+    if (field === "email" && typeof value === "string") {
+      const username = value.split("@")[0];
+      setFormData(prev => ({ ...prev, username }));
+    }
 
     if (field === "password") {
       calculatePasswordStrength(value as string);
@@ -128,7 +133,7 @@ export default function SignUpPage() {
   };
 
   const validateForm = () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.nationality) {
+    if (!formData.first_name || !formData.last_name || !formData.username || !formData.email || !formData.password) {
       setError("Please fill in all required fields");
       return false;
     }
@@ -158,34 +163,113 @@ export default function SignUpPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
+  
     if (!validateForm()) return;
-
+  
     setIsLoading(true);
-
+  
     try {
-      const success = await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+      console.log('Sending signup request with data:', {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        username: formData.username,
         email: formData.email,
-        password: formData.password,
-        nationality: formData.nationality
+        role: formData.role
+        // password not logged for security
       });
-
-      if (success) {
-        toast({
-          title: "Welcome to EduConnect Africa!",
-          description: "Your account has been created successfully. You are now logged in.",
-        });
+  
+      // Call your signup API route
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role
+        }),
+      });
+  
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+  
+      // Get response text first to see what we're getting
+      const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+  
+      if (response.ok) {
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Failed to parse response as JSON:', parseError);
+          setError('Server returned invalid response format');
+          return;
+        }
         
-        // Redirect to questionnaire or dashboard
-        router.push("/questionnaire");
+        toast({
+          title: "Account Created Successfully!",
+          description: "Please sign in with your new account.",
+        });
+  
+        // Automatically sign in the user after successful registration
+        console.log('Attempting auto-login with email:', formData.email);
+        
+        const signInResult = await signIn('credentials', {
+          email: formData.email, // Use email for login instead of username
+          password: formData.password,
+          redirect: false,
+        });
+
+        console.log('Auto-login result:', signInResult);
+
+        if (signInResult?.ok) {
+          // Wait for session to be established
+          await getSession();
+          
+          toast({
+            title: "Welcome to EduConnect Africa!",
+            description: "You are now logged in.",
+          });
+          
+          // Redirect to home page
+          router.push("/");
+        } else {
+          console.error('Auto-login failed:', signInResult?.error);
+          // Registration successful but auto-login failed
+          toast({
+            title: "Account Created!",
+            description: "Please sign in with your username and password.",
+          });
+          router.push(`/auth/signin?message=Please sign in with username: ${formData.username}`);
+        }
       } else {
-        setError("Registration failed. Please try again.");
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Failed to parse error response as JSON:', parseError);
+          setError(`Server error: ${responseText.substring(0, 100)}...`);
+          return;
+        }
+        
+        if (errorData.detail && Array.isArray(errorData.detail)) {
+          // Handle validation errors from FastAPI
+          const validationErrors = errorData.detail.map((err: any) => 
+            `${err.loc.join('.')}: ${err.msg}`
+          ).join(', ');
+          setError(`Validation error: ${validationErrors}`);
+        } else {
+          setError(errorData.error || "Registration failed. Please try again.");
+        }
       }
     } catch (error) {
-      setError("Registration failed. Please try again.");
       console.error("Registration error:", error);
+      setError("Registration failed. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -194,11 +278,14 @@ export default function SignUpPage() {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     try {
-      // For mock implementation, simulate Google signup
-      toast({
-        title: "Feature Not Available",
-        description: "Google signup is not available in demo mode. Please use email signup.",
+      const result = await signIn('google', { 
+        callbackUrl: '/dashboard',
+        redirect: false 
       });
+      
+      if (result?.error) {
+        setError("Google sign-up failed. Please try again.");
+      }
     } catch (error) {
       setError("Google sign-up failed. Please try again.");
       console.error("Google sign up error:", error);
@@ -363,28 +450,28 @@ export default function SignUpPage() {
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="first_name">First Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="firstName"
+                      id="first_name"
                       type="text"
                       placeholder="First name"
-                      value={formData.firstName}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      value={formData.first_name}
+                      onChange={(e) => handleInputChange("first_name", e.target.value)}
                       className="pl-10"
                       required
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="last_name">Last Name</Label>
                   <Input
-                    id="lastName"
+                    id="last_name"
                     type="text"
                     placeholder="Last name"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    value={formData.last_name}
+                    onChange={(e) => handleInputChange("last_name", e.target.value)}
                     required
                   />
                 </div>
@@ -407,44 +494,23 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* Country */}
+              {/* Username (auto-generated, but editable) */}
               <div className="space-y-2">
-                <Label htmlFor="nationality">Country</Label>
-                <Select
-                  value={formData.nationality}
-                  onValueChange={(value) => handleInputChange("nationality", value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <div className="flex items-center">
-                      <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="Select your country" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {AFRICAN_COUNTRIES.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Role Information */}
-              <div className="space-y-2">
-                <Label>Account Type</Label>
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-blue-600" />
-                    <div>
-                      <div className="font-medium text-blue-900">Student Account</div>
-                      <div className="text-xs text-blue-700">For students looking for universities</div>
-                    </div>
-                  </div>
+                <Label htmlFor="username">Username</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Username"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange("username", e.target.value)}
+                    className="pl-10"
+                    required
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  <Shield className="h-3 w-3 inline mr-1" />
-                  Counselor accounts are created by administrators only
+                  Auto-generated from your email, but you can change it
                 </p>
               </div>
 
