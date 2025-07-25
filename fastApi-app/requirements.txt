@@ -5,3 +5,5 @@ sqlmodel
 asyncpg
 redis
 python-multipart
+PyJWT
+passlib
