@@ -37,7 +37,7 @@ A modern, fast (high-performance) web API built with FastAPI for Python 3.7+.
 
 2. **Run the development server**:
    ```bash
-   uvicorn main:app --reload
+   uvicorn app.main:app --reload
    ```
 
 3. **Open your browser** and navigate to:
