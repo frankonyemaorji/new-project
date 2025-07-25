@@ -170,6 +170,7 @@ export function useUniversity(universityId: string) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // services for university okay. 
   React.useEffect(() => {
     const fetchUniversityData = async () => {
       if (!universityId) return;
