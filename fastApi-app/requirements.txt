@@ -14,3 +14,7 @@ colorama
 starlette
 SQLAlchemy
 sqlmodel
+pytest
+pytest-asyncio
+aiosqlite
+httpx
