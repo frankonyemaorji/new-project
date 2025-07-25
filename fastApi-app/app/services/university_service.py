@@ -39,6 +39,8 @@ class UniversityService:
             
             await session.commit()
             await session.refresh(university)
+            # Explicitly load relationships
+            await session.refresh(university, ["academic_programs"])
             return university
             
         except Exception as e:
