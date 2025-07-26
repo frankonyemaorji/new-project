@@ -1,15 +1,14 @@
 "use client";
-
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import type { UniversityCard as UniversityCardType } from "@/lib/types/university";
 import Image from "next/image";
-import { GraduationCap, MapPin, Users, DollarSign, Bookmark } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Bookmark, DollarSign, ExternalLink, GraduationCap, MapPin, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import type { University } from "@/lib/services/universityService";
 
 interface UniversityCardProps {
-  university: UniversityCardType;
+  university: University;
   isSaved?: boolean;
   onSave?: (id: string) => void;
   showMatchPercentage?: boolean;
@@ -24,15 +23,17 @@ export function UniversityCard({
   matchPercentage,
 }: UniversityCardProps) {
   const {
-    id,
+    uid,
     name,
     country,
     city,
-    logo,
     ranking,
-    acceptanceRate,
-    averageTuition,
-    nigerianStudentsCount,
+    average_annual_tuition,
+    nigerian_students,
+    university_type,
+    offers_scholarships,
+    provides_accommodation,
+    website,
   } = university;
 
   const rankingColors = {
@@ -42,7 +43,7 @@ export function UniversityCard({
     'B': 'bg-[#fddf6d] text-black',
     'C+': 'bg-[#fa9949] text-white',
     'C': 'bg-[#ef4423] text-white',
-    'Not Ranked': 'bg-gray-400 text-white',
+    'NOT_RANKED': 'bg-gray-400 text-white',
   };
 
   const formatTuition = (amount: number) => {
@@ -51,10 +52,6 @@ export function UniversityCard({
       currency: 'USD',
       maximumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const formatAcceptanceRate = (rate: number) => {
-    return `${(rate * 100).toFixed(0)}%`;
   };
 
   return (
@@ -66,19 +63,9 @@ export function UniversityCard({
       )}
       <div className="relative p-4 flex items-center space-x-4 bg-muted/50">
         <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-border">
-          {logo ? (
-            <Image
-              src={logo}
-              alt={`${name} logo`}
-              className="object-contain"
-              fill
-              sizes="80px"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted">
-              <GraduationCap className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
+          <div className="flex h-full w-full items-center justify-center bg-muted">
+            <GraduationCap className="h-8 w-8 text-muted-foreground" />
+          </div>
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg truncate">{name}</h3>
@@ -89,12 +76,12 @@ export function UniversityCard({
           <div className="flex items-center mt-1 space-x-2">
             <Badge
               variant="outline"
-              className={`${rankingColors[ranking as keyof typeof rankingColors]} border-none font-semibold`}
+              className={`${rankingColors[ranking]} border-none font-semibold`}
             >
-              {ranking}
+              {ranking === 'NOT_RANKED' ? 'Not Ranked' : ranking}
             </Badge>
-            <Badge variant="outline" className="text-xs">
-              {formatAcceptanceRate(acceptanceRate)} Acceptance
+            <Badge variant="outline" className="text-xs capitalize">
+              {university_type}
             </Badge>
           </div>
         </div>
@@ -103,7 +90,7 @@ export function UniversityCard({
             variant="ghost"
             size="icon"
             className="h-8 w-8 absolute top-3 right-3"
-            onClick={() => onSave(id)}
+            onClick={() => onSave(uid)}
             aria-label={isSaved ? "Remove from saved" : "Save university"}
           >
             <Bookmark
@@ -117,21 +104,45 @@ export function UniversityCard({
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center">
               <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span className="font-medium">{formatTuition(averageTuition)}/year</span>
+              <span className="font-medium">{formatTuition(average_annual_tuition)}/year</span>
             </div>
-            <div className="flex items-center">
-              <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span className="font-medium">{nigerianStudentsCount} Nigerian students</span>
-            </div>
+            {nigerian_students !== undefined && nigerian_students > 0 && (
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-1 text-muted-foreground" />
+                <span className="font-medium">{nigerian_students} Nigerian students</span>
+              </div>
+            )}
+          </div>
+
+          {/* Additional info badges */}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {offers_scholarships && (
+              <Badge variant="secondary" className="text-xs">
+                Scholarships Available
+              </Badge>
+            )}
+            {provides_accommodation && (
+              <Badge variant="secondary" className="text-xs">
+                Accommodation
+              </Badge>
+            )}
           </div>
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-between">
-        <Link href={`/universities/${id}`} passHref>
-          <Button variant="default" className="w-full">
+      <CardFooter className="p-4 pt-0 flex gap-2">
+        <Link href={`/universities/${uid}`} className="flex-1">
+          <Button variant="default" className="w-full" size="sm">
+            <GraduationCap className="h-4 w-4 mr-2" />
             View Details
           </Button>
         </Link>
+        {website && (
+          <Link href={website} target="_blank">
+            <Button variant="outline" size="sm">
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </Link>
+        )}
       </CardFooter>
     </Card>
   );

@@ -1,60 +1,37 @@
 "use client";
-
+import { Filter } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Filter, X } from "lucide-react";
-import type { UniversityRanking, UniversitySearchFilters } from "@/lib/types/university";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { UniversityFilters } from "@/lib/services/universityService";
 
-const countries = [
-  "Ghana",
-  "South Africa",
-  "Kenya",
-  "Rwanda",
-  "Egypt",
-  "Morocco",
-  "Tanzania",
-  "Uganda",
-  "Botswana",
-  "Namibia",
-  "Senegal",
-  "Ethiopia",
+const universityTypes = [
+  { value: "private", label: "Private" },
+  { value: "public", label: "Public" },
+  { value: "research", label: "Research" },
+  { value: "technical", label: "Technical" },
+  { value: "medical", label: "Medical" },
+  { value: "agricultural", label: "Agricultural" },
 ];
 
-const programTypes = [
-  "Bachelor",
-  "Master",
-  "PhD",
-  "Diploma",
-  "Certificate",
-];
-
-const languages = [
-  "English",
-  "French",
-  "Arabic",
-  "Portuguese",
-  "Swahili",
-];
-
-const rankings: UniversityRanking[] = [
-  "A+",
-  "A",
-  "B+",
-  "B",
-  "C+",
-  "C",
-  "Not Ranked",
+const rankings = [
+  { value: "A+", label: "A+" },
+  { value: "A", label: "A" },
+  { value: "B+", label: "B+" },
+  { value: "B", label: "B" },
+  { value: "C+", label: "C+" },
+  { value: "C", label: "C" },
+  { value: "NOT_RANKED", label: "Not Ranked" },
 ];
 
 interface UniversityFiltersProps {
-  onFilterChange: (filters: UniversitySearchFilters) => void;
-  initialFilters?: UniversitySearchFilters;
+  onFilterChange: (filters: UniversityFilters) => void;
+  initialFilters?: UniversityFilters;
   className?: string;
 }
 
@@ -63,60 +40,28 @@ export function UniversityFilters({
   initialFilters,
   className,
 }: UniversityFiltersProps) {
-  const [filters, setFilters] = useState<UniversitySearchFilters>(
+  const [filters, setFilters] = useState<UniversityFilters>(
     initialFilters || {
-      countries: [],
-      programTypes: [],
-      tuitionRange: {
-        min: 0,
-        max: 20000,
-      },
-      rankings: [],
-      languages: [],
-      accommodationRequired: false,
+      limit: 50,
+      skip: 0,
     }
   );
 
   const [expanded, setExpanded] = useState(false);
 
-  const handleCheckboxChange = (
-    filterType: keyof UniversitySearchFilters,
-    value: string
-  ) => {
-    setFilters((prev) => {
-      const currentArray = prev[filterType] as string[] || [];
-      const newArray = currentArray.includes(value)
-        ? currentArray.filter((item) => item !== value)
-        : [...currentArray, value];
-
-      const newFilters = {
-        ...prev,
-        [filterType]: newArray,
-      };
-
-      // Auto-apply filters when changed
-      onFilterChange(newFilters);
-      return newFilters;
-    });
-  };
-
-  const handleTuitionChange = (value: number[]) => {
+  const handleFilterChange = (key: keyof UniversityFilters, value: any) => {
     const newFilters = {
       ...filters,
-      tuitionRange: {
-        min: value[0],
-        max: value[1],
-      },
+      [key]: value === 'all' || value === '' ? undefined : value,
     };
     setFilters(newFilters);
-    // Auto-apply tuition changes
     onFilterChange(newFilters);
   };
 
-  const handleAccommodationChange = (checked: boolean) => {
+  const handleBooleanChange = (key: keyof UniversityFilters, checked: boolean) => {
     const newFilters = {
       ...filters,
-      accommodationRequired: checked,
+      [key]: checked ? true : undefined,
     };
     setFilters(newFilters);
     onFilterChange(newFilters);
@@ -124,15 +69,8 @@ export function UniversityFilters({
 
   const resetFilters = () => {
     const resetFilters = {
-      countries: [],
-      programTypes: [],
-      tuitionRange: {
-        min: 0,
-        max: 20000,
-      },
-      rankings: [],
-      languages: [],
-      accommodationRequired: false,
+      limit: 50,
+      skip: 0,
     };
     setFilters(resetFilters);
     onFilterChange(resetFilters);
@@ -140,16 +78,12 @@ export function UniversityFilters({
 
   const countActiveFilters = () => {
     let count = 0;
-    if (filters.countries && filters.countries.length > 0) count++;
-    if (filters.programTypes && filters.programTypes.length > 0) count++;
-    if (filters.rankings && filters.rankings.length > 0) count++;
-    if (filters.languages && filters.languages.length > 0) count++;
-    if (filters.accommodationRequired) count++;
-    if (
-      filters.tuitionRange &&
-      (filters.tuitionRange.min !== 0 || filters.tuitionRange.max !== 20000)
-    )
-      count++;
+    if (filters.country) count++;
+    if (filters.city) count++;
+    if (filters.university_type) count++;
+    if (filters.ranking) count++;
+    if (filters.offers_scholarships) count++;
+    if (filters.provides_accommodation) count++;
     return count;
   };
 
@@ -188,128 +122,119 @@ export function UniversityFilters({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Tuition Range */}
+          {/* Country */}
           <div>
-            <Label className="font-medium mb-3 block">Tuition Range (USD)</Label>
-            <div className="pt-4 px-2">
-              <Slider
-                value={[
-                  filters.tuitionRange?.min || 0,
-                  filters.tuitionRange?.max || 20000,
-                ]}
-                max={20000}
-                step={500}
-                onValueChange={handleTuitionChange}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between mt-2">
-              <span className="text-sm text-muted-foreground">
-                ${filters.tuitionRange?.min?.toLocaleString() || 0}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                ${filters.tuitionRange?.max?.toLocaleString() || 20000}
-              </span>
-            </div>
+            <Label className="font-medium mb-3 block">Country</Label>
+            <Input
+              placeholder="Enter country name"
+              value={filters.country || ''}
+              onChange={(e) => handleFilterChange('country', e.target.value)}
+            />
           </div>
 
-          {/* Countries */}
+          {/* City */}
           <div>
-            <Label className="font-medium mb-3 block">Countries</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {countries.map((country) => (
-                <div key={country} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`country-${country}`}
-                    checked={filters.countries?.includes(country) || false}
-                    onCheckedChange={() => handleCheckboxChange("countries", country)}
-                  />
-                  <Label
-                    htmlFor={`country-${country}`}
-                    className="text-sm font-normal leading-none cursor-pointer"
-                  >
-                    {country}
-                  </Label>
-                </div>
-              ))}
-            </div>
+            <Label className="font-medium mb-3 block">City</Label>
+            <Input
+              placeholder="Enter city name"
+              value={filters.city || ''}
+              onChange={(e) => handleFilterChange('city', e.target.value)}
+            />
           </div>
 
-          {/* Program Types */}
+          {/* University Type */}
           <div>
-            <Label className="font-medium mb-3 block">Program Types</Label>
-            <div className="flex flex-wrap gap-2">
-              {programTypes.map((type) => (
-                <Badge
-                  key={type}
-                  variant={
-                    filters.programTypes?.includes(type) ? "default" : "outline"
-                  }
-                  className="cursor-pointer"
-                  onClick={() => handleCheckboxChange("programTypes", type)}
-                >
-                  {type}
-                </Badge>
-              ))}
-            </div>
+            <Label className="font-medium mb-3 block">University Type</Label>
+            <Select
+              value={filters.university_type || 'all'}
+              onValueChange={(value) => handleFilterChange('university_type', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {universityTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* University Ranking */}
           <div>
             <Label className="font-medium mb-3 block">University Ranking</Label>
-            <div className="flex flex-wrap gap-2">
-              {rankings.map((rank) => (
-                <Badge
-                  key={rank}
-                  variant={
-                    filters.rankings?.includes(rank) ? "default" : "outline"
-                  }
-                  className="cursor-pointer"
-                  onClick={() => handleCheckboxChange("rankings", rank)}
-                >
-                  {rank}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* Languages */}
-          <div>
-            <Label className="font-medium mb-3 block">Languages of Instruction</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {languages.map((language) => (
-                <div key={language} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`language-${language}`}
-                    checked={filters.languages?.includes(language) || false}
-                    onCheckedChange={() => handleCheckboxChange("languages", language)}
-                  />
-                  <Label
-                    htmlFor={`language-${language}`}
-                    className="text-sm font-normal leading-none cursor-pointer"
-                  >
-                    {language}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Accommodation */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="accommodation"
-              checked={filters.accommodationRequired || false}
-              onCheckedChange={(checked) =>
-                handleAccommodationChange(checked as boolean)
-              }
-            />
-            <Label
-              htmlFor="accommodation"
-              className="font-normal cursor-pointer"
+            <Select
+              value={filters.ranking || 'all'}
+              onValueChange={(value) => handleFilterChange('ranking', value)}
             >
-              Accommodation Required
-            </Label>
+              <SelectTrigger>
+                <SelectValue placeholder="All Rankings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Rankings</SelectItem>
+                {rankings.map((rank) => (
+                  <SelectItem key={rank.value} value={rank.value}>
+                    {rank.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Boolean Filters */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="scholarships"
+                checked={filters.offers_scholarships === true}
+                onCheckedChange={(checked) => 
+                  handleBooleanChange('offers_scholarships', checked as boolean)
+                }
+              />
+              <Label
+                htmlFor="scholarships"
+                className="font-normal cursor-pointer"
+              >
+                Offers Scholarships
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="accommodation"
+                checked={filters.provides_accommodation === true}
+                onCheckedChange={(checked) => 
+                  handleBooleanChange('provides_accommodation', checked as boolean)
+                }
+              />
+              <Label
+                htmlFor="accommodation"
+                className="font-normal cursor-pointer"
+              >
+                Provides Accommodation
+              </Label>
+            </div>
+          </div>
+
+          {/* Results Limit */}
+          <div>
+            <Label className="font-medium mb-3 block">Results per page</Label>
+            <Select
+              value={String(filters.limit || 50)}
+              onValueChange={(value) => handleFilterChange('limit', Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

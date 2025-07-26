@@ -1,14 +1,16 @@
 "use client";
-
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/lib/context/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { getSession, signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/context/AuthContext";
+
 import { 
   Eye, 
   EyeOff, 
@@ -19,19 +21,40 @@ import {
   LogIn,
   ArrowRight
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { login, user } = useAuth();
+  const { user } = useAuth();
 
   // Redirect authenticated users away from signin page
   React.useEffect(() => {
     if (user) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [user, router]);
+
+  // Check for any messages from URL params
+  React.useEffect(() => {
+    const message = searchParams.get('message');
+    const error = searchParams.get('error');
+    
+    if (message) {
+      toast({
+        title: "Information",
+        description: message,
+      });
+    }
+    
+    if (error) {
+      if (error === 'CredentialsSignin') {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        setError("An error occurred during sign in. Please try again.");
+      }
+    }
+  }, [searchParams, toast]);
   
   const [formData, setFormData] = useState({
     email: "",
@@ -43,6 +66,8 @@ export default function SignInPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
   const validateForm = () => {
@@ -50,6 +75,14 @@ export default function SignInPage() {
       setError("Please fill in all fields");
       return false;
     }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    
     return true;
   };
 
@@ -62,19 +95,33 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(formData.email, formData.password);
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
 
-      if (success) {
+      if (result?.error) {
+        if (result.error === 'CredentialsSignin') {
+          setError("Invalid email or password. Please check your credentials and try again.");
+        } else {
+          setError("An error occurred during sign in. Please try again.");
+        }
+      } else if (result?.ok) {
+        // Wait for session to be established
+        await getSession();
+        
         toast({
           title: "Welcome back!",
           description: "You have been signed in successfully.",
         });
-        router.push("/");
-      } else {
-        setError("Invalid email or password");
+        
+        // Redirect to home or intended page
+        const callbackUrl = searchParams.get('callbackUrl') || '/';
+        router.push(callbackUrl);
       }
     } catch (error) {
-      setError("An error occurred during sign in");
+      setError("An unexpected error occurred. Please try again.");
       console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
@@ -84,17 +131,30 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      // For mock implementation, simulate Google signin
-      toast({
-        title: "Feature Not Available",
-        description: "Google signin is not available in demo mode. Please use email signin.",
+      const result = await signIn('google', {
+        callbackUrl: searchParams.get('callbackUrl') || '/',
+        redirect: false
       });
+      
+      if (result?.error) {
+        setError("Google sign-in failed. Please try again.");
+      } else if (result?.url) {
+        // Redirect to the callback URL
+        router.push(result.url);
+      }
     } catch (error) {
       setError("Google sign-in failed. Please try again.");
       console.error("Google sign in error:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleForgotPassword = () => {
+    toast({
+      title: "Password Reset",
+      description: "Password reset functionality will be available soon. Please contact support if needed.",
+    });
   };
 
   return (
@@ -118,8 +178,35 @@ export default function SignInPage() {
             <p className="text-green-100 text-lg mb-8 leading-relaxed">
               Continue exploring universities and opportunities across Africa with your personalized dashboard.
             </p>
+
+            {/* Quick Stats or Benefits */}
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <div className="bg-white/20 rounded-full p-2 mr-3">
+                  <GraduationCap className="h-4 w-4 text-green-200" />
+                </div>
+                <span className="text-green-100">Access your saved universities</span>
+              </div>
+              <div className="flex items-center">
+                <div className="bg-white/20 rounded-full p-2 mr-3">
+                  <LogIn className="h-4 w-4 text-green-200" />
+                </div>
+                <span className="text-green-100">Continue your applications</span>
+              </div>
+              <div className="flex items-center">
+                <div className="bg-white/20 rounded-full p-2 mr-3">
+                  <ArrowRight className="h-4 w-4 text-green-200" />
+                </div>
+                <span className="text-green-100">Get personalized recommendations</span>
+              </div>
+            </div>
           </div>
         </div>
+        
+        {/* Decorative elements */}
+        <div className="absolute top-10 right-10 w-20 h-20 border border-white/20 rounded-full" />
+        <div className="absolute bottom-10 right-20 w-32 h-32 border border-white/10 rounded-full" />
+        <div className="absolute top-1/2 right-5 w-2 h-2 bg-white/40 rounded-full" />
       </div>
 
       {/* Right Side - Login Form */}
@@ -208,6 +295,7 @@ export default function SignInPage() {
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       className="pl-10"
                       required
+                      autoComplete="email"
                     />
                   </div>
                 </div>
@@ -225,6 +313,7 @@ export default function SignInPage() {
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       className="pl-10 pr-10"
                       required
+                      autoComplete="current-password"
                     />
                     <button
                       type="button"
@@ -238,6 +327,17 @@ export default function SignInPage() {
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Forgot Password Link */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-sm text-green-600 hover:underline"
+                  >
+                    Forgot password?
+                  </button>
                 </div>
 
                 <Button
