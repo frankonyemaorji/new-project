@@ -39,8 +39,6 @@ class UniversityService:
             
             await session.commit()
             await session.refresh(university)
-            # Explicitly load relationships
-            await session.refresh(university, ["academic_programs"])
             return university
             
         except Exception as e:
@@ -53,8 +51,11 @@ class UniversityService:
     async def get_university_by_id(self, university_id: uuid.UUID, session: AsyncSession) -> Optional[University]:
         """Get university by ID with academic programs"""
         try:
+            from sqlalchemy.orm import selectinload
+            
             statement = (
                 select(University)
+                .options(selectinload(University.academic_programs))
                 .where(University.uid == university_id)
             )
             result = await session.exec(statement)
@@ -92,7 +93,13 @@ class UniversityService:
         """Get universities with filtering options"""
         
         try:
-            statement = select(University).where(University.is_active == True)
+            from sqlalchemy.orm import selectinload
+            
+            statement = (
+                select(University)
+                .options(selectinload(University.academic_programs))
+                .where(University.is_active == True)
+            )
             
             # Apply filters
             if country:
