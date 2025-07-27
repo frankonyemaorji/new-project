@@ -1,15 +1,14 @@
 "use client";
-
-import { useState } from "react";
+import { AlertCircle, CheckCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdmin } from "@/lib/context/AdminContext";
-import { Shield, Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -27,6 +26,14 @@ export default function AdminLoginPage() {
     if (error) setError("");
   };
 
+  const fillDemoCredentials = () => {
+    setFormData({
+      email: "testadmin@gmail.com",
+      password: "Password12"
+    });
+    setError("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -41,10 +48,10 @@ export default function AdminLoginPage() {
         toast.success("Admin login successful!");
         router.push("/admin/dashboard");
       } else {
-        setError("Invalid email or password");
+        setError("Invalid email or password. Please check your credentials.");
       }
     } catch (error) {
-      setError("An error occurred during login");
+      setError("An error occurred during login. Please try again.");
       console.error("Login error:", error);
     }
   };
@@ -65,6 +72,7 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -91,6 +99,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   placeholder="Enter your password"
                   disabled={isLoading}
+                  className="pr-10"
                 />
                 <Button
                   type="button"
@@ -109,6 +118,27 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            {/* Demo Credentials */}
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="flex justify-between items-center">
+                  <div className="text-sm">
+                    <strong>Demo:</strong> testadmin@gmail.com / Password12
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={fillDemoCredentials}
+                    disabled={isLoading}
+                  >
+                    Use Demo
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+
             <Button
               type="submit"
               className="w-full bg-green-600 hover:bg-green-700"
@@ -120,7 +150,10 @@ export default function AdminLoginPage() {
                   Signing In...
                 </>
               ) : (
-                "Sign In"
+                <>
+                  <Shield className="h-4 w-4 mr-2" />
+                  Sign In to Admin Panel
+                </>
               )}
             </Button>
           </form>
@@ -128,8 +161,10 @@ export default function AdminLoginPage() {
           <div className="mt-6 p-4 bg-muted/50 rounded-md">
             <h4 className="text-sm font-medium mb-2">Administrator Access:</h4>
             <div className="text-xs space-y-1">
-              <p>Please use your authorized admin credentials to access the system.</p>
-              <p className="text-muted-foreground">Contact your system administrator if you need access.</p>
+              <p>Use the demo credentials above to test the admin functionality.</p>
+              <p className="text-muted-foreground">
+                The system will try multiple login endpoints and fallback to demo mode if needed.
+              </p>
             </div>
           </div>
         </CardContent>

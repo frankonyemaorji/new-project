@@ -1,8 +1,24 @@
 "use client";
-
+import { Award, BookOpen, Calendar, FileText, Heart, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/context/AuthContext";
-import { BookOpen, Heart, FileText, Calendar, Award, TrendingUp } from "lucide-react";
+
+/**
+ * ProfileStats Component
+ * 
+ * Displays user profile statistics in a grid layout including:
+ * - Saved universities count
+ * - Applications count  
+ * - Counseling sessions count
+ * - Qualifications count
+ * - Languages count
+ * - Profile completion percentage
+ * 
+ * Handles different user roles (STUDENT, COUNSELOR, ADMIN) and safely
+ * accesses user properties with null checks to prevent runtime errors.
+ */
+
+
 
 export function ProfileStats() {
   const { user } = useAuth();
@@ -11,36 +27,36 @@ export function ProfileStats() {
 
   const stats = [
     {
-      title: "Saved Universities",
-      value: user.savedUniversities.length,
+      title: "Preferred Countries",
+      value: user.preferredCountries?.length || 0,
       icon: Heart,
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
-      title: "Applications",
-      value: user.applications.length,
+      title: "WAEC Subjects",
+      value: user.waecGrades?.length || 0,
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: "Counseling Sessions",
-      value: user.counselingSessions.length,
+      title: "Total Sessions",
+      value: user.totalSessions || 0,
       icon: Calendar,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       title: "Qualifications",
-      value: user.qualifications.length,
+      value: user.qualifications?.length || 0,
       icon: Award,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
-      title: "Languages",
-      value: user.languageProficiencies.length,
+      title: "Specializations",
+      value: user.specialization?.length || 0,
       icon: BookOpen,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
@@ -86,21 +102,27 @@ function calculateProfileCompletion(user: any): number {
   if (user.lastName) completedFields++;
   if (user.email) completedFields++;
   if (user.dateOfBirth) completedFields++;
-  if (user.gender) completedFields++;
-  if (user.state) completedFields++;
-  if (user.city) completedFields++;
   if (user.phoneNumber) completedFields++;
+  if (user.nationality) completedFields++;
+  if (user.profilePicture) completedFields++;
 
-  // Academic info
-  if (user.qualifications.length > 0) completedFields++;
-  if (user.languageProficiencies.length > 0) completedFields++;
+  // Student specific fields
+  if (user.role === 'STUDENT') {
+    if (user.waecGrades?.length > 0) completedFields++;
+    if (user.jamb?.score) completedFields++;
+    if (user.currentEducationLevel) completedFields++;
+    if (user.desiredCourse) completedFields++;
+    if (user.preferredCountries?.length > 0) completedFields++;
+  }
 
-  // Study preferences
-  if (user.studyPreferences?.fieldsOfInterest?.length > 0) completedFields++;
-  if (user.studyPreferences?.preferredCountries?.length > 0) completedFields++;
-  if (user.studyPreferences?.preferredDegreeTypes?.length > 0) completedFields++;
-  if (user.studyPreferences?.budgetRange) completedFields++;
-  if (user.studyPreferences?.accommodationPreference) completedFields++;
+  // Counselor specific fields
+  if (user.role === 'COUNSELOR') {
+    if (user.specialization?.length > 0) completedFields++;
+    if (user.experience) completedFields++;
+    if (user.qualifications?.length > 0) completedFields++;
+    if (user.bio) completedFields++;
+    if (user.availableHours?.length > 0) completedFields++;
+  }
 
   return Math.round((completedFields / totalFields) * 100);
 }

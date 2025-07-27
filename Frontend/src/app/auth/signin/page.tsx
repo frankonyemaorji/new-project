@@ -19,7 +19,9 @@ import {
   AlertCircle, 
   GraduationCap,
   LogIn,
-  ArrowRight
+  ArrowRight,
+  Shield,
+  Users
 } from "lucide-react";
 
 export default function SignInPage() {
@@ -31,7 +33,7 @@ export default function SignInPage() {
   // Redirect authenticated users away from signin page
   React.useEffect(() => {
     if (user) {
-      router.push("/dashboard");
+      router.push("/");
     }
   }, [user, router]);
 
@@ -150,6 +152,10 @@ export default function SignInPage() {
     }
   };
 
+  const handleAdminLogin = () => {
+    router.push('/admin/login');
+  };
+
   const handleForgotPassword = () => {
     toast({
       title: "Password Reset",
@@ -227,9 +233,30 @@ export default function SignInPage() {
             </p>
           </div>
 
+          {/* Login Type Selection */}
+          <div className="mb-6">
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="border-2 border-green-200 bg-green-50">
+                <CardContent className="p-4 text-center">
+                  <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <h3 className="font-semibold text-green-800">Student Login</h3>
+                  <p className="text-xs text-green-600 mt-1">Access your dashboard</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer" onClick={handleAdminLogin}>
+                <CardContent className="p-4 text-center">
+                  <Shield className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <h3 className="font-semibold text-blue-800">Admin Login</h3>
+                  <p className="text-xs text-blue-600 mt-1">Manage platform</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
           <Card className="shadow-lg">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+              <CardTitle className="text-2xl text-center">Student Sign In</CardTitle>
               <CardDescription className="text-center">
                 Choose your sign-in method
               </CardDescription>
@@ -242,6 +269,25 @@ export default function SignInPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              {/* Admin Login Button */}
+              <Button
+                onClick={handleAdminLogin}
+                variant="outline"
+                className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Sign in as Administrator
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or continue as student</span>
+                </div>
+              </div>
 
               {/* Google Sign In */}
               <Button
@@ -276,7 +322,7 @@ export default function SignInPage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                  <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
                 </div>
               </div>
 
@@ -353,7 +399,7 @@ export default function SignInPage() {
                   ) : (
                     <div className="flex items-center">
                       <LogIn className="h-4 w-4 mr-2" />
-                      Sign In
+                      Sign In as Student
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </div>
                   )}

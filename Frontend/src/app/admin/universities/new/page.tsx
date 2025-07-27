@@ -1,29 +1,30 @@
 "use client";
-
-import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useAdmin } from "@/lib/context/AdminContext";
+import type { AcademicProgram, CreateUniversityPayload } from "@/lib/context/AdminContext";
+
 import {
   Save,
   ArrowLeft,
   Plus,
   Trash2,
-  Upload,
-  MapPin,
+  Building2,
   Globe,
   Users,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
 
 const africanCountries = [
   "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cameroon",
@@ -37,181 +38,119 @@ const africanCountries = [
   "Zambia", "Zimbabwe"
 ];
 
-const universityTypes = ["Public", "Private", "Research", "Technical", "Medical", "Agricultural"];
-const rankings = ["A+", "A", "B+", "B", "C+", "C", "Not Ranked"];
+const universityTypes: Array<'private' | 'public' | 'research' | 'technical' | 'medical' | 'agricultural'> = [
+  "private", "public", "research", "technical", "medical", "agricultural"
+];
+
+const rankings: Array<'A+' | 'A' | 'B+' | 'B' | 'C+' | 'C' | 'NOT_RANKED'> = [
+  "A+", "A", "B+", "B", "C+", "C", "NOT_RANKED"
+];
+
 const languages = ["English", "French", "Arabic", "Portuguese", "Swahili", "Afrikaans"];
-
-interface Program {
-  id: string;
-  name: string;
-  degreeType: string;
-  duration: number;
-  tuition: number;
-  language: string;
-  hasScholarship: boolean;
-  entryRequirements: string;
-}
-
-interface Facility {
-  id: string;
-  name: string;
-  description: string;
-}
 
 export default function NewUniversityPage() {
   const router = useRouter();
+  const { createUniversity, hasPermission } = useAdmin();
   const [isLoading, setIsLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateUniversityPayload>({
     name: "",
+    website: "",
     country: "",
     city: "",
-    foundedYear: new Date().getFullYear(),
-    type: "",
-    ranking: "",
+    founded_year: new Date().getFullYear(),
+    university_type: "public",
+    ranking: "NOT_RANKED",
     description: "",
-    website: "",
-    studentsCount: 0,
-    nigerianStudentsCount: 0,
-    acceptanceRate: 0,
-    averageTuition: 0,
-    contactEmail: "",
-    contactPhone: "",
-    languagesOfInstruction: [] as string[],
-    hasScholarships: false,
-    hasAccommodation: false,
-    isPartnerUniversity: false,
+    nigerian_students: 0,
+    acceptance_rate: 0,
+    average_annual_tuition: 0,
+    contact_email: "",
+    contact_phone: "",
+    languages_of_instruction: [],
+    offers_scholarships: false,
+    provides_accommodation: false,
+    partner_university: false,
+    is_active: true,
+    academic_programs: []
   });
 
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-
-  const handleInputChange = (field: string, value: string | number | boolean) => {
+  const handleInputChange = (field: keyof CreateUniversityPayload, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleLanguageToggle = (language: string) => {
     setFormData(prev => ({
       ...prev,
-      languagesOfInstruction: prev.languagesOfInstruction.includes(language)
-        ? prev.languagesOfInstruction.filter(l => l !== language)
-        : [...prev.languagesOfInstruction, language]
+      languages_of_instruction: prev.languages_of_instruction?.includes(language)
+        ? prev.languages_of_instruction.filter(l => l !== language)
+        : [...(prev.languages_of_instruction || []), language]
     }));
   };
 
   const addProgram = () => {
-    const newProgram: Program = {
-      id: `prog-${Date.now()}`,
+    const newProgram: AcademicProgram = {
+      uid: `temp-${Date.now()}`, // Temporary ID
       name: "",
-      degreeType: "Bachelor",
-      duration: 4,
-      tuition: 0,
-      language: "English",
-      hasScholarship: false,
-      entryRequirements: ""
+      degree_type: "Bachelor",
+      faculty: "",
+      department: "",
+      duration_years: 4,
+      description: "",
+      entry_requirements: "",
+      tuition_fee: 0,
+      is_active: true,
+      university_uid: "", // Will be set by backend
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
-    setPrograms([...programs, newProgram]);
+    
+    setFormData(prev => ({
+      ...prev,
+      academic_programs: [...(prev.academic_programs || []), newProgram]
+    }));
   };
 
-  const updateProgram = (index: number, field: string, value: string | number | boolean) => {
-    setPrograms(programs.map((prog, i) =>
-      i === index ? { ...prog, [field]: value } : prog
-    ));
+  const updateProgram = (index: number, field: keyof AcademicProgram, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      academic_programs: prev.academic_programs?.map((prog, i) =>
+        i === index ? { ...prog, [field]: value } : prog
+      ) || []
+    }));
   };
 
   const removeProgram = (index: number) => {
-    setPrograms(programs.filter((_, i) => i !== index));
-  };
-
-  const addFacility = () => {
-    const newFacility: Facility = {
-      id: `fac-${Date.now()}`,
-      name: "",
-      description: ""
-    };
-    setFacilities([...facilities, newFacility]);
-  };
-
-  const updateFacility = (index: number, field: string, value: string) => {
-    setFacilities(facilities.map((fac, i) =>
-      i === index ? { ...fac, [field]: value } : fac
-    ));
-  };
-
-  const removeFacility = (index: number) => {
-    setFacilities(facilities.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      academic_programs: prev.academic_programs?.filter((_, i) => i !== index) || []
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.country || !formData.city) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all required fields (Name, Country, City)");
+      return;
+    }
+
+    if (!hasPermission("universities.write") && !hasPermission("all")) {
+      toast.error("You don't have permission to create universities");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Use mock data service
-      const { MockDataService } = await import('@/lib/services/mockDataService');
-      const dataService = MockDataService.getInstance();
+      const result = await createUniversity(formData);
       
-      const universityData = {
-        ...formData,
-        programs: programs.map(program => ({
-          id: program.id,
-          name: program.name,
-          degreeType: program.degreeType,
-          durationYears: program.duration,
-          annualTuition: program.tuition,
-          currency: "USD",
-          language: program.language,
-          hasScholarship: false,
-          entryRequirements: "Standard requirements",
-          description: `${program.name} program`
-        })),
-        facilitiesAndServices: facilities,
-        ranking: formData.ranking as any,
-        languagesOfInstruction: [formData.languageOfInstruction],
-        accommodationAvailable: true,
-        accommodationCost: {
-          min: 1000,
-          max: 2000
-        },
-        tuitionRange: {
-          min: formData.averageTuition - 1000,
-          max: formData.averageTuition + 1000
-        },
-        studentsCount: 10000,
-        nigerianStudentsCount: 500,
-        internationalStudentsPercentage: 0.15,
-        acceptanceRate: 0.6,
-        accreditation: ["National Accreditation Board"],
-        contactInfo: {
-          email: "info@university.edu",
-          phone: "+000 000 000",
-          address: `${formData.city}, ${formData.country}`
-        },
-        scholarships: [],
-        admissionRequirements: {
-          general: "Completed secondary education",
-          international: "Qualification evaluation required",
-          nigerian: "WAEC/NECO with minimum 5 credits"
-        },
-        admissionDeadlines: {
-          fall: "May 31st",
-          spring: "November 30th"
-        },
-        strengths: [],
-        images: [],
-        logo: "",
-        rankingScore: 80
-      };
-      
-      await dataService.addUniversity(universityData);
-      toast.success("University created successfully! (Note: Changes are not persistent in demo mode)");
-      router.push("/admin/universities");
+      if (result) {
+        toast.success("University created successfully!");
+        router.push("/admin/universities");
+      } else {
+        toast.error("Failed to create university. Please check the console for details.");
+      }
     } catch (error) {
       toast.error("Failed to create university");
       console.error("University creation error:", error);
@@ -220,423 +159,449 @@ export default function NewUniversityPage() {
     }
   };
 
+  if (!hasPermission("universities.write") && !hasPermission("all")) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
+          <p className="text-muted-foreground">You don't have permission to create universities.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href="/admin/universities">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Universities
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Add New University</h1>
-              <p className="text-muted-foreground">
-                Create a new university listing with programs and facilities
-              </p>
-            </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link href="/admin/universities">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Universities
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">Add New University</h1>
+            <p className="text-muted-foreground">
+              Create a new university with academic programs
+            </p>
           </div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
+      {/* API Format Example */}
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          This form creates universities using your API format. The demo credentials (testadmin@gmail.com / Password12) 
+          will work with both real API calls and fallback mode.
+        </AlertDescription>
+      </Alert>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Building2 className="h-5 w-5 mr-2" />
+              Basic Information
+            </CardTitle>
+            <CardDescription>
+              Essential details about the university
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">University Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  placeholder="e.g., African Leadership University"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  type="url"
+                  value={formData.website || ""}
+                  onChange={(e) => handleInputChange("website", e.target.value)}
+                  placeholder="https://alueducation.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="country">Country *</Label>
+                <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {africanCountries.map(country => (
+                      <SelectItem key={country} value={country}>{country}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange("city", e.target.value)}
+                  placeholder="e.g., Kigali"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="founded_year">Founded Year</Label>
+                <Input
+                  id="founded_year"
+                  type="number"
+                  min="1800"
+                  max={new Date().getFullYear()}
+                  value={formData.founded_year || new Date().getFullYear()}
+                  onChange={(e) => handleInputChange("founded_year", parseInt(e.target.value) || new Date().getFullYear())}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="university_type">University Type</Label>
+                <Select value={formData.university_type} onValueChange={(value) => handleInputChange("university_type", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {universityTypes.map(type => (
+                      <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ranking">Ranking</Label>
+                <Select value={formData.ranking} onValueChange={(value) => handleInputChange("ranking", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ranking" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rankings.map(ranking => (
+                      <SelectItem key={ranking} value={ranking}>{ranking}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ""}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+                placeholder="Brief description of the university..."
+                rows={4}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Statistics & Contact */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <MapPin className="h-5 w-5 mr-2" />
-                Basic Information
+                <Users className="h-5 w-5 mr-2" />
+                Statistics
               </CardTitle>
-              <CardDescription>
-                Essential details about the university
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">University Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="e.g., University of Ghana"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange("website", e.target.value)}
-                    placeholder="https://university.edu"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country *</Label>
-                  <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {africanCountries.map(country => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange("city", e.target.value)}
-                    placeholder="e.g., Accra"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="foundedYear">Founded Year</Label>
-                  <Input
-                    id="foundedYear"
-                    type="number"
-                    min="1800"
-                    max={new Date().getFullYear()}
-                    value={formData.foundedYear}
-                    onChange={(e) => handleInputChange("foundedYear", Number.parseInt(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">University Type</Label>
-                  <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {universityTypes.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ranking">Ranking</Label>
-                  <Select value={formData.ranking} onValueChange={(value) => handleInputChange("ranking", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select ranking" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {rankings.map(ranking => (
-                        <SelectItem key={ranking} value={ranking}>{ranking}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Brief description of the university..."
-                  rows={4}
+                <Label htmlFor="nigerian_students">Nigerian Students</Label>
+                <Input
+                  id="nigerian_students"
+                  type="number"
+                  min="0"
+                  value={formData.nigerian_students || 0}
+                  onChange={(e) => handleInputChange("nigerian_students", parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="acceptance_rate">Acceptance Rate (0-1)</Label>
+                <Input
+                  id="acceptance_rate"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formData.acceptance_rate || 0}
+                  onChange={(e) => handleInputChange("acceptance_rate", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="average_annual_tuition">Average Annual Tuition (USD)</Label>
+                <Input
+                  id="average_annual_tuition"
+                  type="number"
+                  min="0"
+                  value={formData.average_annual_tuition}
+                  onChange={(e) => handleInputChange("average_annual_tuition", parseInt(e.target.value) || 0)}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Statistics & Contact */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Statistics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="studentsCount">Total Students</Label>
-                  <Input
-                    id="studentsCount"
-                    type="number"
-                    min="0"
-                    value={formData.studentsCount}
-                    onChange={(e) => handleInputChange("studentsCount", Number.parseInt(e.target.value) || 0)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nigerianStudentsCount">Nigerian Students</Label>
-                  <Input
-                    id="nigerianStudentsCount"
-                    type="number"
-                    min="0"
-                    value={formData.nigerianStudentsCount}
-                    onChange={(e) => handleInputChange("nigerianStudentsCount", Number.parseInt(e.target.value) || 0)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="acceptanceRate">Acceptance Rate (%)</Label>
-                  <Input
-                    id="acceptanceRate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={formData.acceptanceRate}
-                    onChange={(e) => handleInputChange("acceptanceRate", Number.parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="averageTuition">Average Annual Tuition (USD)</Label>
-                  <Input
-                    id="averageTuition"
-                    type="number"
-                    min="0"
-                    value={formData.averageTuition}
-                    onChange={(e) => handleInputChange("averageTuition", Number.parseInt(e.target.value) || 0)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Globe className="h-5 w-5 mr-2" />
-                  Contact Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contactEmail">Contact Email</Label>
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => handleInputChange("contactEmail", e.target.value)}
-                    placeholder="admissions@university.edu"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactPhone">Contact Phone</Label>
-                  <Input
-                    id="contactPhone"
-                    value={formData.contactPhone}
-                    onChange={(e) => handleInputChange("contactPhone", e.target.value)}
-                    placeholder="+233 xxx xxx xxxx"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Languages of Instruction</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {languages.map(language => (
-                      <div key={language} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`lang-${language}`}
-                          checked={formData.languagesOfInstruction.includes(language)}
-                          onCheckedChange={() => handleLanguageToggle(language)}
-                        />
-                        <Label htmlFor={`lang-${language}`} className="text-sm">
-                          {language}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasScholarships"
-                      checked={formData.hasScholarships}
-                      onCheckedChange={(checked) => handleInputChange("hasScholarships", checked)}
-                    />
-                    <Label htmlFor="hasScholarships">Offers Scholarships</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasAccommodation"
-                      checked={formData.hasAccommodation}
-                      onCheckedChange={(checked) => handleInputChange("hasAccommodation", checked)}
-                    />
-                    <Label htmlFor="hasAccommodation">Provides Accommodation</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isPartnerUniversity"
-                      checked={formData.isPartnerUniversity}
-                      onCheckedChange={(checked) => handleInputChange("isPartnerUniversity", checked)}
-                    />
-                    <Label htmlFor="isPartnerUniversity">Partner University</Label>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Programs Section */}
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2" />
-                    Academic Programs
-                  </CardTitle>
-                  <CardDescription>
-                    Add programs offered by the university
-                  </CardDescription>
-                </div>
-                <Button type="button" onClick={addProgram} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Program
-                </Button>
-              </div>
+              <CardTitle className="flex items-center">
+                <Globe className="h-5 w-5 mr-2" />
+                Contact & Settings
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              {programs.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No programs added yet. Click "Add Program" to start.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {programs.map((program, index) => (
-                    <Card key={program.id} className="border border-border/60">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-4">
-                          <h4 className="font-medium">Program {index + 1}</h4>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeProgram(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label>Program Name</Label>
-                            <Input
-                              value={program.name}
-                              onChange={(e) => updateProgram(index, "name", e.target.value)}
-                              placeholder="e.g., Computer Science"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Degree Type</Label>
-                            <Select
-                              value={program.degreeType}
-                              onValueChange={(value) => updateProgram(index, "degreeType", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Certificate">Certificate</SelectItem>
-                                <SelectItem value="Diploma">Diploma</SelectItem>
-                                <SelectItem value="Bachelor">Bachelor</SelectItem>
-                                <SelectItem value="Master">Master</SelectItem>
-                                <SelectItem value="PhD">PhD</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Duration (years)</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="10"
-                              value={program.duration}
-                              onChange={(e) => updateProgram(index, "duration", Number.parseInt(e.target.value))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Annual Tuition (USD)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={program.tuition}
-                              onChange={(e) => updateProgram(index, "tuition", Number.parseInt(e.target.value))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Language</Label>
-                            <Select
-                              value={program.language}
-                              onValueChange={(value) => updateProgram(index, "language", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {languages.map(lang => (
-                                  <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center space-x-2 pt-6">
-                            <Checkbox
-                              checked={program.hasScholarship}
-                              onCheckedChange={(checked) => updateProgram(index, "hasScholarship", checked)}
-                            />
-                            <Label>Has Scholarship</Label>
-                          </div>
-                        </div>
-                        <div className="mt-4 space-y-2">
-                          <Label>Entry Requirements</Label>
-                          <Textarea
-                            value={program.entryRequirements}
-                            onChange={(e) => updateProgram(index, "entryRequirements", e.target.value)}
-                            placeholder="List the entry requirements for this program..."
-                            rows={3}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="contact_email">Contact Email</Label>
+                <Input
+                  id="contact_email"
+                  type="email"
+                  value={formData.contact_email || ""}
+                  onChange={(e) => handleInputChange("contact_email", e.target.value)}
+                  placeholder="alu@gmail.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact_phone">Contact Phone</Label>
+                <Input
+                  id="contact_phone"
+                  value={formData.contact_phone || ""}
+                  onChange={(e) => handleInputChange("contact_phone", e.target.value)}
+                  placeholder="250792525545"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Languages of Instruction</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {languages.map(language => (
+                    <div key={language} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`lang-${language}`}
+                        checked={formData.languages_of_instruction?.includes(language) || false}
+                        onCheckedChange={() => handleLanguageToggle(language)}
+                      />
+                      <Label htmlFor={`lang-${language}`} className="text-sm">
+                        {language}
+                      </Label>
+                    </div>
                   ))}
                 </div>
-              )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="offers_scholarships"
+                    checked={formData.offers_scholarships}
+                    onCheckedChange={(checked) => handleInputChange("offers_scholarships", checked)}
+                  />
+                  <Label htmlFor="offers_scholarships">Offers Scholarships</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="provides_accommodation"
+                    checked={formData.provides_accommodation}
+                    onCheckedChange={(checked) => handleInputChange("provides_accommodation", checked)}
+                  />
+                  <Label htmlFor="provides_accommodation">Provides Accommodation</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="partner_university"
+                    checked={formData.partner_university || false}
+                    onCheckedChange={(checked) => handleInputChange("partner_university", checked)}
+                  />
+                  <Label htmlFor="partner_university">Partner University</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => handleInputChange("is_active", checked)}
+                  />
+                  <Label htmlFor="is_active">Active University</Label>
+                </div>
+              </div>
             </CardContent>
           </Card>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-4">
-            <Link href="/admin/universities">
-              <Button type="button" variant="outline">
-                Cancel
+        {/* Academic Programs Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center">
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Academic Programs
+                </CardTitle>
+                <CardDescription>
+                  Add programs offered by the university
+                </CardDescription>
+              </div>
+              <Button type="button" onClick={addProgram} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Program
               </Button>
-            </Link>
-            <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Create University
-                </>
-              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(!formData.academic_programs || formData.academic_programs.length === 0) ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No programs added yet. Click "Add Program" to start.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {formData.academic_programs.map((program, index) => (
+                  <Card key={program.uid} className="border border-border/60">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-4">
+                        <h4 className="font-medium">Program {index + 1}</h4>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeProgram(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Program Name</Label>
+                          <Input
+                            value={program.name}
+                            onChange={(e) => updateProgram(index, "name", e.target.value)}
+                            placeholder="e.g., Bachelors In Software Engineering"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Degree Type</Label>
+                          <Select
+                            value={program.degree_type}
+                            onValueChange={(value) => updateProgram(index, "degree_type", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Certificate">Certificate</SelectItem>
+                              <SelectItem value="Diploma">Diploma</SelectItem>
+                              <SelectItem value="Bachelors">Bachelors</SelectItem>
+                              <SelectItem value="Masters">Masters</SelectItem>
+                              <SelectItem value="PhD">PhD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Faculty</Label>
+                          <Input
+                            value={program.faculty}
+                            onChange={(e) => updateProgram(index, "faculty", e.target.value)}
+                            placeholder="e.g., Engineering"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Department</Label>
+                          <Input
+                            value={program.department}
+                            onChange={(e) => updateProgram(index, "department", e.target.value)}
+                            placeholder="e.g., Computer Science"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Duration (years)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={program.duration_years}
+                            onChange={(e) => updateProgram(index, "duration_years", parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Tuition Fee (USD)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={program.tuition_fee}
+                            onChange={(e) => updateProgram(index, "tuition_fee", parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={program.description || ""}
+                          onChange={(e) => updateProgram(index, "description", e.target.value)}
+                          placeholder="Brief description of the program..."
+                          rows={2}
+                        />
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        <Label>Entry Requirements</Label>
+                        <Textarea
+                          value={program.entry_requirements || ""}
+                          onChange={(e) => updateProgram(index, "entry_requirements", e.target.value)}
+                          placeholder="e.g., At least B grade in Mathematics, physics and computer science"
+                          rows={3}
+                        />
+                      </div>
+                      <div className="mt-4 flex items-center space-x-2">
+                        <Checkbox
+                          checked={program.is_active}
+                          onCheckedChange={(checked) => updateProgram(index, "is_active", checked)}
+                        />
+                        <Label>Program Active</Label>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end space-x-4">
+          <Link href="/admin/universities">
+            <Button type="button" variant="outline">
+              Cancel
             </Button>
-          </div>
-        </form>
-      </div>
-    </AdminLayout>
+          </Link>
+          <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Create University
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

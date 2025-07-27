@@ -1,12 +1,15 @@
 "use client";
-
-import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { format, parseISO } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
 import {
   CheckCircle,
   Calendar,
@@ -18,12 +21,13 @@ import {
   Star,
   ArrowRight,
   CalendarDays,
-  Bell
+  Bell,
+  ExternalLink,
+  Copy,
+  Share2
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import Link from "next/link";
 
-// Sample counselor data
+// Updated counselor data with real calendar links
 const counselorsData = [
   {
     id: "counselor-001",
@@ -31,7 +35,12 @@ const counselorsData = [
     image: "/images/counselors/amina.jpg",
     title: "International Education Specialist",
     email: "amina@educonnect.com",
-    phone: "+234 801 234 5678"
+    phone: "+234 801 234 5678",
+    calendarLinks: {
+      video: "https://chat.google.com/dm/4LviiUAAAAE/k8COZN8IRsA/k8COZN8IRsA",
+      chat: "https://chat.google.com/dm/4LviiUAAAAE/7tcrqeRUMUY/7tcrqeRUMUY",
+      package: "https://chat.google.com/dm/4LviiUAAAAE/zuqFzgs24ms/zuqFzgs24ms"
+    }
   },
   {
     id: "counselor-002",
@@ -39,7 +48,12 @@ const counselorsData = [
     image: "/images/counselors/michael.jpg",
     title: "Engineering Education Consultant",
     email: "michael@educonnect.com",
-    phone: "+234 802 345 6789"
+    phone: "+234 802 345 6789",
+    calendarLinks: {
+      video: "https://chat.google.com/dm/4LviiUAAAAE/k8COZN8IRsA/k8COZN8IRsA",
+      chat: "https://chat.google.com/dm/4LviiUAAAAE/7tcrqeRUMUY/7tcrqeRUMUY",
+      package: "https://chat.google.com/dm/4LviiUAAAAE/zuqFzgs24ms/zuqFzgs24ms"
+    }
   },
   {
     id: "counselor-003",
@@ -47,7 +61,12 @@ const counselorsData = [
     image: "/images/counselors/grace.jpg",
     title: "Scholarship & Financial Aid Expert",
     email: "grace@educonnect.com",
-    phone: "+234 803 456 7890"
+    phone: "+234 803 456 7890",
+    calendarLinks: {
+      video: "https://chat.google.com/dm/4LviiUAAAAE/k8COZN8IRsA/k8COZN8IRsA",
+      chat: "https://chat.google.com/dm/4LviiUAAAAE/7tcrqeRUMUY/7tcrqeRUMUY",
+      package: "https://chat.google.com/dm/4LviiUAAAAE/zuqFzgs24ms/zuqFzgs24ms"
+    }
   }
 ];
 
@@ -82,9 +101,16 @@ export default function BookingConfirmedPage() {
   const sessionDate = searchParams.get("date");
   const sessionTime = searchParams.get("time");
 
+  // State for calendar interaction
+  const [calendarOpened, setCalendarOpened] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
   // Find counselor and session type
   const counselor = counselorsData.find(c => c.id === counselorId) || counselorsData[0];
   const consultationType = consultationTypes.find(ct => ct.id === sessionType) || consultationTypes[0];
+
+  // Get the real calendar link for this session type
+  const calendarLink = counselor.calendarLinks[sessionType as keyof typeof counselor.calendarLinks];
 
   // Generate booking reference
   const bookingRef = `EC-${paymentId?.slice(-8).toUpperCase()}`;
@@ -99,6 +125,27 @@ export default function BookingConfirmedPage() {
     console.log("Downloading receipt for payment:", paymentId);
   };
 
+  // Open real calendar link
+  const openRealCalendar = () => {
+    if (calendarLink) {
+      window.open(calendarLink, '_blank');
+      setCalendarOpened(true);
+    }
+  };
+
+  // Copy calendar link
+  const copyCalendarLink = async () => {
+    if (calendarLink) {
+      try {
+        await navigator.clipboard.writeText(calendarLink);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy link:', err);
+      }
+    }
+  };
+
   const addToCalendar = () => {
     if (!sessionDate || !sessionTime) return;
 
@@ -109,7 +156,7 @@ export default function BookingConfirmedPage() {
       title: `Consultation with ${counselor.name}`,
       start: `${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
       end: `${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-      description: `${consultationType.name} consultation session with ${counselor.name}, ${counselor.title}`,
+      description: `${consultationType.name} consultation session with ${counselor.name}, ${counselor.title}. Finalize time at: ${calendarLink}`,
       location: 'Online via EduConnect Africa'
     };
 
@@ -235,6 +282,57 @@ export default function BookingConfirmedPage() {
               </CardContent>
             </Card>
 
+            {/* REAL CALENDAR INTEGRATION - NEW SECTION */}
+            <Card className="border-green-200 bg-green-50">
+              <CardHeader>
+                <CardTitle className="flex items-center text-green-800">
+                  <ExternalLink className="h-5 w-5 mr-2" />
+                  Finalize Your Appointment Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-green-700">
+                  🎯 <strong>Important:</strong> Click the button below to access {counselor.name}'s real calendar and confirm your exact appointment time.
+                </p>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    onClick={openRealCalendar}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open {counselor.name}'s Calendar
+                  </Button>
+                  
+                  <Button
+                    onClick={copyCalendarLink}
+                    variant="outline"
+                    className="border-green-300 text-green-700 hover:bg-green-100"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    {copySuccess ? "Copied!" : "Copy Link"}
+                  </Button>
+                </div>
+
+                {calendarOpened && (
+                  <div className="bg-green-100 border border-green-300 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                      <span className="text-sm text-green-700">
+                        ✅ Calendar opened! Please select your preferred time slot.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-green-600 space-y-1">
+                  <p>• This will open {counselor.name}'s actual calendar</p>
+                  <p>• Select your preferred time slot from available options</p>
+                  <p>• You'll receive final confirmation once time is selected</p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* What's Next */}
             <Card>
               <CardHeader>
@@ -247,9 +345,9 @@ export default function BookingConfirmedPage() {
                       <span className="text-xs font-semibold text-green-600">1</span>
                     </div>
                     <div>
-                      <h4 className="font-medium">Confirmation Email</h4>
+                      <h4 className="font-medium">Select Your Time</h4>
                       <p className="text-sm text-muted-foreground">
-                        You'll receive a detailed confirmation email with session link and preparation tips.
+                        Click the calendar link above to choose your exact appointment time with {counselor.name}.
                       </p>
                     </div>
                   </div>
@@ -259,9 +357,9 @@ export default function BookingConfirmedPage() {
                       <span className="text-xs font-semibold text-green-600">2</span>
                     </div>
                     <div>
-                      <h4 className="font-medium">Session Reminders</h4>
+                      <h4 className="font-medium">Confirmation Email</h4>
                       <p className="text-sm text-muted-foreground">
-                        We'll send you reminders 24 hours and 1 hour before your session.
+                        You'll receive a detailed confirmation email with session link and preparation tips.
                       </p>
                     </div>
                   </div>
@@ -296,7 +394,7 @@ export default function BookingConfirmedPage() {
                   className="w-full justify-start"
                 >
                   <CalendarDays className="h-4 w-4 mr-2" />
-                  Add to Calendar
+                  Add to My Calendar
                 </Button>
 
                 <Button
@@ -314,6 +412,40 @@ export default function BookingConfirmedPage() {
                     View All Bookings
                   </Button>
                 </Link>
+              </CardContent>
+            </Card>
+
+            {/* Calendar Link Card */}
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader>
+                <CardTitle className="text-base text-blue-800">📅 Calendar Access</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-blue-700">
+                  Direct link to {counselor.name}'s calendar for easy access:
+                </p>
+                <div className="bg-blue-100 p-2 rounded text-xs break-all text-blue-600">
+                  {calendarLink}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={openRealCalendar}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Open
+                  </Button>
+                  <Button
+                    onClick={copyCalendarLink}
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-700"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

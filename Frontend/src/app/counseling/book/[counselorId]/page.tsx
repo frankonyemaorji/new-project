@@ -1,23 +1,22 @@
 "use client";
-
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { refreshSession } from "@/lib/auth-utils";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Video, MessageCircle, Package, Star, MapPin, GraduationCap, CreditCard } from "lucide-react";
 import Link from "next/link";
-import { format, addDays, setHours, setMinutes, isAfter, isBefore, parseISO } from "date-fns";
+import { addDays, format, isAfter, isBefore, parseISO, setHours, setMinutes } from "date-fns";
+import { ArrowLeft, Calendar as CalendarIcon, Clock, CreditCard, GraduationCap, MapPin, MessageCircle, Package, Star, Video } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { refreshSession } from "@/lib/auth-utils";
 
-// Sample counselor data
+// Updated counselors data with real calendar links
 const counselorsData = [
   {
     id: "counselor-001",
@@ -37,6 +36,12 @@ const counselorsData = [
       chat: 8000,
       package: 50000
     },
+    // Real calendar integration
+    calendarLinks: {
+      video: "https://chat.google.com/dm/4LviiUAAAAE/k8COZN8IRsA/k8COZN8IRsA",
+      chat: "https://chat.google.com/dm/4LviiUAAAAE/7tcrqeRUMUY/7tcrqeRUMUY", 
+      package: "https://chat.google.com/dm/4LviiUAAAAE/zuqFzgs24ms/zuqFzgs24ms"
+    },
     availability: {
       timezone: "WAT",
       workingHours: { start: 9, end: 17 },
@@ -45,7 +50,7 @@ const counselorsData = [
     }
   },
   {
-    id: "counselor-002",
+    id: "counselor-002", 
     name: "Michael Okonkwo",
     image: "/images/counselors/michael.jpg",
     title: "Engineering Education Consultant",
@@ -62,6 +67,12 @@ const counselorsData = [
       chat: 7000,
       package: 45000
     },
+    // Real calendar integration
+    calendarLinks: {
+      video: "https://chat.google.com/dm/4LviiUAAAAE/k8COZN8IRsA/k8COZN8IRsA",
+      chat: "https://chat.google.com/dm/4LviiUAAAAE/7tcrqeRUMUY/7tcrqeRUMUY",
+      package: "https://chat.google.com/dm/4LviiUAAAAE/zuqFzgs24ms/zuqFzgs24ms"
+    },
     availability: {
       timezone: "WAT",
       workingHours: { start: 10, end: 18 },
@@ -71,7 +82,7 @@ const counselorsData = [
   },
   {
     id: "counselor-003",
-    name: "Grace Adeyemi",
+    name: "Grace Adeyemi", 
     image: "/images/counselors/grace.jpg",
     title: "Scholarship & Financial Aid Expert",
     rating: 4.7,
@@ -86,6 +97,12 @@ const counselorsData = [
       video: 13000,
       chat: 8000,
       package: 48000
+    },
+    // Real calendar integration
+    calendarLinks: {
+      video: "https://chat.google.com/dm/4LviiUAAAAE/k8COZN8IRsA/k8COZN8IRsA",
+      chat: "https://chat.google.com/dm/4LviiUAAAAE/7tcrqeRUMUY/7tcrqeRUMUY",
+      package: "https://chat.google.com/dm/4LviiUAAAAE/zuqFzgs24ms/zuqFzgs24ms"
     },
     availability: {
       timezone: "WAT",
@@ -122,6 +139,34 @@ const consultationTypes = [
     features: ["Multiple sessions", "Application review", "Follow-up support", "Priority support"]
   }
 ];
+
+// Calendar integration info component
+const CalendarIntegrationCard = () => (
+  <Card className="border-blue-200 bg-blue-50">
+    <CardContent className="p-4">
+      <div className="flex items-start space-x-3">
+        <CalendarIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+        <div>
+          <h4 className="font-medium text-blue-800 mb-1">Real Calendar Integration</h4>
+          <p className="text-sm text-blue-600 mb-2">
+            When you complete your booking, you'll be directed to the counselor's real calendar to finalize your appointment time.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="bg-blue-100 text-blue-700 text-xs">
+              📅 Live Calendar
+            </Badge>
+            <Badge variant="outline" className="bg-blue-100 text-blue-700 text-xs">
+              ✅ Real Appointments
+            </Badge>
+            <Badge variant="outline" className="bg-blue-100 text-blue-700 text-xs">
+              📞 Direct Contact
+            </Badge>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 export default function BookConsultationPage() {
   const params = useParams();
@@ -182,6 +227,7 @@ export default function BookConsultationPage() {
     }).format(price);
   };
 
+  // FIXED BOOKING HANDLER - Now properly inside the component
   const handleBooking = async () => {
     if (!selectedDate || !selectedTime || !selectedType) {
       alert("⚠️ Please select all required booking details (date, time, and consultation type)");
@@ -220,10 +266,27 @@ export default function BookConsultationPage() {
     setIsBooking(true);
 
     try {
-      // Simulate booking process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate booking confirmation
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      alert(`✅ Booking confirmed!\n\nCounselor: ${counselor.name}\nDate: ${format(selectedDate, "EEEE, MMM d, yyyy")}\nTime: ${format(parseISO(selectedTime), "h:mm a")}\nType: ${selectedConsultationType?.name}\nUser: ${session.user.name}\n\n🎉 In a real app, this would redirect to payment processing.`);
+      // Generate a payment ID for the booking confirmation page
+      const paymentId = `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Show updated confirmation message
+      const bookingDetails = `✅ Booking confirmed!\n\nCounselor: ${counselor.name}\nDate: ${format(selectedDate, "EEEE, MMM d, yyyy")}\nTime: ${format(parseISO(selectedTime), "h:mm a")}\nType: ${selectedConsultationType?.name}\nUser: ${session.user.name}\n\n📅 Click OK to access the calendar link and finalize your appointment time!`;
+
+      if (confirm(bookingDetails)) {
+        // Redirect to booking confirmation page with all the details
+        const confirmationParams = new URLSearchParams({
+          paymentId: paymentId,
+          counselorId: counselorId,
+          type: selectedType,
+          date: selectedDate.toISOString(),
+          time: selectedTime
+        });
+
+        router.push(`/counseling/booking-confirmed?${confirmationParams.toString()}`);
+      }
 
       // Reset booking state
       setBookingAttempted(false);
@@ -391,6 +454,9 @@ export default function BookConsultationPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Calendar Integration Info */}
+            <CalendarIntegrationCard />
 
             {/* Consultation Type Selection */}
             <Card>

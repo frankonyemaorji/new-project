@@ -1,11 +1,11 @@
 "use client";
-
+import { LogOut, Shield } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Toaster } from "sonner";
+import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/lib/context/AdminContext";
 import { AdminProvider } from "@/lib/context/AdminContext";
-import { Button } from "@/components/ui/button";
-import { LogOut, Shield } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 function AdminLayoutContent({
   children,
@@ -69,7 +69,7 @@ function AdminLayoutContent({
             </div>
           </div>
           <Button 
-            variant="secondary" 
+            variant="secondary"
             onClick={handleLogout}
             className="bg-white/10 hover:bg-white/20 text-white border-white/20"
           >
@@ -95,6 +95,7 @@ export default function AdminLayout({
       <AdminLayoutContent>
         {children}
       </AdminLayoutContent>
+      <Toaster />
     </AdminProvider>
   );
 }

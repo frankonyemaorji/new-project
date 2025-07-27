@@ -1,22 +1,37 @@
 "use client";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import Link from "next/link";
+import { ExternalLink, Eye, Heart, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/context/AuthContext";
 import { sampleUniversities } from "@/lib/data/universities";
-import { Heart, ExternalLink, Eye, Trash2 } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
+
+/**
+ * SavedUniversities Component
+ * 
+ * Displays user's saved universities with detailed information cards.
+ * Handles cases where user has no saved universities with appropriate
+ * empty states and call-to-action buttons.
+ * 
+ * Uses safe property access to prevent errors when savedUniversities
+ * array doesn't exist or is empty.
+ */
+
+
 
 export function SavedUniversities() {
   const { user } = useAuth();
 
   if (!user) return null;
 
+  // Safely get saved universities with fallback to empty array
+  const userSavedUniversities = user.savedUniversities || [];
+  
   // Get saved universities from sample data
   const savedUniversities = sampleUniversities.filter(uni =>
-    user.savedUniversities.includes(uni.id)
+    userSavedUniversities.includes(uni.id)
   );
 
   const formatCurrency = (amount: number) => {
@@ -40,6 +55,8 @@ export function SavedUniversities() {
   const handleRemoveFromSaved = (universityId: string) => {
     // In a real app, this would update the user's saved universities
     console.log("Remove from saved:", universityId);
+    // TODO: Implement API call to remove university from saved list
+    // Example: await userService.removeUniversityFromSaved(user._id, universityId);
   };
 
   return (

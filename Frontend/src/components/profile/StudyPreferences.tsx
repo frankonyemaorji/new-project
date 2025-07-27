@@ -1,18 +1,34 @@
 "use client";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/lib/context/AuthContext";
-import { GraduationCap, MapPin, DollarSign, Calendar, BookOpen, Edit, Plus } from "lucide-react";
 import Link from "next/link";
+import { BookOpen, Calendar, DollarSign, Edit, GraduationCap, MapPin, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/lib/context/AuthContext";
+
+/**
+ * StudyPreferences Component
+ * 
+ * Displays and manages user's study preferences including:
+ * - Fields of interest
+ * - Location preferences  
+ * - Degree preferences
+ * - Budget and financial preferences
+ * - University matching status
+ * 
+ * Handles cases where studyPreferences may not exist in the user object
+ * with appropriate empty states and default values.
+ */
+
+
 
 export function StudyPreferences() {
   const { user } = useAuth();
 
   if (!user) return null;
 
-  const preferences = user.studyPreferences;
+  // Safely access studyPreferences with fallback to empty object
+  const preferences = user.studyPreferences || {};
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -21,6 +37,18 @@ export function StudyPreferences() {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Helper functions to safely check array lengths
+  const hasFieldsOfInterest = preferences.fieldsOfInterest && preferences.fieldsOfInterest.length > 0;
+  const hasPreferredCountries = preferences.preferredCountries && preferences.preferredCountries.length > 0;
+  const hasPreferredDegreeTypes = preferences.preferredDegreeTypes && preferences.preferredDegreeTypes.length > 0;
+  const hasPreferredLanguages = preferences.preferredLanguages && preferences.preferredLanguages.length > 0;
+
+  const hasAnyPreferences = 
+    hasFieldsOfInterest ||
+    hasPreferredCountries ||
+    hasPreferredDegreeTypes ||
+    preferences.budgetRange;
 
   return (
     <div className="space-y-6">
@@ -44,9 +72,9 @@ export function StudyPreferences() {
           </div>
         </CardHeader>
         <CardContent>
-          {preferences?.fieldsOfInterest?.length > 0 ? (
+          {hasFieldsOfInterest ? (
             <div className="flex flex-wrap gap-2">
-              {preferences.fieldsOfInterest.map((field) => (
+              {preferences.fieldsOfInterest!.map((field) => (
                 <Badge key={field} variant="secondary">
                   {field}
                 </Badge>
@@ -90,12 +118,12 @@ export function StudyPreferences() {
           </div>
         </CardHeader>
         <CardContent>
-          {preferences?.preferredCountries?.length > 0 ? (
+          {hasPreferredCountries ? (
             <div className="space-y-4">
               <div>
                 <h4 className="font-medium mb-2">Preferred Countries:</h4>
                 <div className="flex flex-wrap gap-2">
-                  {preferences.preferredCountries.map((country) => (
+                  {preferences.preferredCountries!.map((country) => (
                     <Badge key={country} variant="outline">
                       {country}
                     </Badge>
@@ -103,22 +131,26 @@ export function StudyPreferences() {
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-medium mb-2">Languages of Instruction:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {preferences.preferredLanguages?.map((language) => (
-                    <Badge key={language} variant="secondary">
-                      {language}
-                    </Badge>
-                  ))}
+              {hasPreferredLanguages && (
+                <div>
+                  <h4 className="font-medium mb-2">Languages of Instruction:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {preferences.preferredLanguages!.map((language) => (
+                      <Badge key={language} variant="secondary">
+                        {language}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="p-3 bg-muted/30 rounded-md">
-                <p className="text-sm">
-                  <strong>Accommodation:</strong> {preferences.accommodationPreference}
-                </p>
-              </div>
+              {preferences.accommodationPreference && (
+                <div className="p-3 bg-muted/30 rounded-md">
+                  <p className="text-sm">
+                    <strong>Accommodation:</strong> {preferences.accommodationPreference}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8">
@@ -158,12 +190,12 @@ export function StudyPreferences() {
           </div>
         </CardHeader>
         <CardContent>
-          {preferences?.preferredDegreeTypes?.length > 0 ? (
+          {hasPreferredDegreeTypes ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium mb-2">Degree Types:</h4>
                 <div className="flex flex-wrap gap-2">
-                  {preferences.preferredDegreeTypes.map((type) => (
+                  {preferences.preferredDegreeTypes!.map((type) => (
                     <Badge key={type} variant="outline">
                       {type}
                     </Badge>
@@ -174,8 +206,12 @@ export function StudyPreferences() {
               <div>
                 <h4 className="font-medium mb-2">Study Details:</h4>
                 <div className="space-y-2 text-sm">
-                  <p><strong>Study Mode:</strong> {preferences.studyMode}</p>
-                  <p><strong>Start Date:</strong> {preferences.startDate}</p>
+                  {preferences.studyMode && (
+                    <p><strong>Study Mode:</strong> {preferences.studyMode}</p>
+                  )}
+                  {preferences.startDate && (
+                    <p><strong>Start Date:</strong> {preferences.startDate}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -217,7 +253,7 @@ export function StudyPreferences() {
           </div>
         </CardHeader>
         <CardContent>
-          {preferences?.budgetRange ? (
+          {preferences.budgetRange ? (
             <div className="space-y-4">
               <div className="p-4 bg-muted/30 rounded-md">
                 <h4 className="font-medium mb-2">Annual Tuition Budget</h4>
@@ -268,23 +304,39 @@ export function StudyPreferences() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-green-800">Profile Complete</h4>
-                  <p className="text-sm text-green-600">
-                    Your preferences are detailed enough for accurate matching
-                  </p>
+            {hasAnyPreferences ? (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-green-800">Profile Complete</h4>
+                    <p className="text-sm text-green-600">
+                      Your preferences are detailed enough for accurate matching
+                    </p>
+                  </div>
+                  <Badge className="bg-green-100 text-green-800">
+                    Active
+                  </Badge>
                 </div>
-                <Badge className="bg-green-100 text-green-800">
-                  Active
-                </Badge>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-orange-800">Incomplete Profile</h4>
+                    <p className="text-sm text-orange-600">
+                      Add your study preferences to get personalized university matches
+                    </p>
+                  </div>
+                  <Badge className="bg-orange-100 text-orange-800">
+                    Pending
+                  </Badge>
+                </div>
+              </div>
+            )}
 
             <div className="text-center">
               <Link href="/universities?personalized=true">
-                <Button>
+                <Button disabled={!hasAnyPreferences}>
                   View My University Matches
                 </Button>
               </Link>

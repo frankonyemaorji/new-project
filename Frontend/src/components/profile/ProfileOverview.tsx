@@ -1,12 +1,22 @@
 "use client";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { AlertCircle, CheckCircle, Clock, Star, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/context/AuthContext";
-import { AlertCircle, CheckCircle, Clock, Star, TrendingUp } from "lucide-react";
-import Link from "next/link";
+
+/**
+ * ProfileOverview Component
+ * 
+ * Displays user profile overview including profile completion status,
+ * quick stats, recent activities, and personalized recommendations.
+ * 
+ * Handles both backend user model fields and frontend-specific properties
+ * with proper null checks and default values.
+ */
+
 
 export function ProfileOverview() {
   const { user } = useAuth();
@@ -80,7 +90,7 @@ export function ProfileOverview() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Application Status</p>
-                <p className="text-2xl font-bold">{user.applications.length}</p>
+                <p className="text-2xl font-bold">{user.applications?.length || 0}</p>
                 <p className="text-xs text-blue-600">Active applications</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
@@ -166,21 +176,23 @@ function calculateProfileCompletion(user: any): number {
   if (user.lastName) completedFields++;
   if (user.email) completedFields++;
   if (user.dateOfBirth) completedFields++;
+  if (user.phoneNumber) completedFields++;
+  if (user.nationality) completedFields++;
+
+  // Backend model fields
+  if (user.waecGrades?.length > 0) completedFields++;
+  if (user.qualifications?.length > 0) completedFields++;
+  if (user.preferredCountries?.length > 0) completedFields++;
+
+  // Additional profile fields (may not exist in backend)
   if (user.gender) completedFields++;
   if (user.state) completedFields++;
   if (user.city) completedFields++;
-  if (user.phoneNumber) completedFields++;
 
-  // Academic info
-  if (user.qualifications.length > 0) completedFields++;
-  if (user.languageProficiencies.length > 0) completedFields++;
-
-  // Study preferences
+  // Study preferences (frontend-specific)
   if (user.studyPreferences?.fieldsOfInterest?.length > 0) completedFields++;
-  if (user.studyPreferences?.preferredCountries?.length > 0) completedFields++;
   if (user.studyPreferences?.preferredDegreeTypes?.length > 0) completedFields++;
   if (user.studyPreferences?.budgetRange) completedFields++;
-  if (user.studyPreferences?.accommodationPreference) completedFields++;
 
   return Math.round((completedFields / totalFields) * 100);
 }
@@ -189,10 +201,12 @@ function getIncompleteFields(user: any): string[] {
   const incomplete = [];
 
   if (!user.dateOfBirth) incomplete.push("Add your date of birth");
+  if (!user.phoneNumber) incomplete.push("Add your phone number");
+  if (!user.nationality) incomplete.push("Add your nationality");
   if (!user.gender) incomplete.push("Specify your gender");
   if (!user.state) incomplete.push("Add your state of origin");
-  if (!user.phoneNumber) incomplete.push("Add your phone number");
-  if (user.qualifications.length === 0) incomplete.push("Add your qualifications");
+  if (user.waecGrades?.length === 0) incomplete.push("Add your WAEC grades");
+  if (user.qualifications?.length === 0) incomplete.push("Add your qualifications");
   if (!user.studyPreferences?.fieldsOfInterest?.length) incomplete.push("Select fields of interest");
   if (!user.studyPreferences?.preferredCountries?.length) incomplete.push("Choose preferred countries");
 
@@ -220,11 +234,11 @@ function getRecentActivities(user: any) {
 function getRecommendations(user: any) {
   const recommendations = [];
 
-  if (user.qualifications.length === 0) {
+  if (user.waecGrades?.length === 0) {
     recommendations.push({
       icon: Star,
-      title: "Add Your Qualifications",
-      description: "Adding your academic qualifications helps us recommend suitable universities.",
+      title: "Add Your WAEC Grades",
+      description: "Adding your WAEC results helps us recommend suitable universities.",
       action: "Add Now",
       link: "/profile/settings"
     });
@@ -240,7 +254,7 @@ function getRecommendations(user: any) {
     });
   }
 
-  if (user.savedUniversities.length === 0) {
+  if (user.savedUniversities?.length === 0) {
     recommendations.push({
       icon: CheckCircle,
       title: "Explore Universities",
